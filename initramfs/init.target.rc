@@ -1,0 +1,127 @@
+# Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above
+#       copyright notice, this list of conditions and the following
+#       disclaimer in the documentation and/or other materials provided
+#       with the distribution.
+#     * Neither the name of Code Aurora Forum, Inc. nor the names of its
+#       contributors may be used to endorse or promote products derived
+#       from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+on boot
+    chown system system /dev/accelerometer
+    chown system system /dev/akm8975
+    chmod 664	/dev/accelerometer
+    chmod 664	/dev/akm8975
+    chown system system /sys/class/K3G_GYRO-dev/k3g/gyro_selftest_dps
+    chown system system /sys/class/sec/gsensorcal/calibration
+
+# ko files for vibrator
+    insmod /lib/modules/vibrator.ko
+
+    chown system system /sys/class/timed_output/vibrator/enable
+	chmod 0664 /sys/class/timed_output/vibrator/enable    
+
+on emmc-fs
+    mount ext3 /dev/block/mmcblk0p24 /system remount rw
+    mkdir /system/etc/firmware/misc 0771 system system
+    wait /dev/block/mmcblk0p13
+    mount vfat /dev/block/mmcblk0p13 /system/etc/firmware/misc ro shortname=lower
+    mkdir /system/etc/firmware/misc_mdm 0771 system system
+    wait /dev/block/mmcblk0p17
+    mount vfat /dev/block/mmcblk0p17 /system/etc/firmware/misc_mdm ro shortname=lower
+    exec /system/bin/sh /system/etc/init.qcom.modem_links.sh
+    mount ext4 /dev/block/mmcblk0p24 /system remount ro barrier=0
+    mkdir /tombstones 0744 radio system
+    mount ext4 /dev/block/mmcblk0p27 /tombstones nosuid nodev barrier=1
+		chown radio system /tombstones
+		mkdir /tombstones/mdm 0744 radio system
+		chown radio system /tombstones/mdm
+		
+on post-fs
+    wait /dev/ttyHSL1
+    mkdir /data/qcks 0770 system system
+
+#SISO-PLAYREADY-CHANGES
+#DRM directory creation
+    mkdir /system/etc/security/.drm 0775
+    chown root root /system/etc/security/.drm
+    chmod 0775 /system/etc/security/.drm
+    # Added for testing DIVX DRM
+    mkdir /efs/.android 0777
+
+    # Added for Playready DRM Support
+    mkdir /data/data/.drm 0775
+   	chown drm system /data/data/.drm
+    	chmod 0775 /data/data/.drm
+
+    mkdir /data/data/.drm/.playready 0775
+  	chown drm system /data/data/.drm/.playready
+  	chmod 0775 /data/data/.drm/.playready
+
+# DRM directory creation
+    # DivX DRM	
+    mkdir /efs/.files 0777
+    mkdir /efs/.files/.dx1 0777
+    mkdir /efs/.files/.dm33 0777
+    mkdir /efs/.files/.mp301 0777
+#SISO-PLAYREADY-CHANGES
+
+service kickstart /system/bin/qcks l
+    oneshot
+
+service dcvsd0 /system/bin/dcvsd -c 0 -f /data/misc/dcvsd/dcvsd0.conf
+    user root
+    disabled
+
+service dcvsd1 /system/bin/dcvsd -c 1 -f /data/misc/dcvsd/dcvsd1.conf
+    user root
+    disabled
+
+service dcvs0 /system/bin/dcvs --cpu=0 --slacktime=64
+    user root
+    disabled
+
+service dcvs1 /system/bin/dcvs --cpu=1 --slacktime=64
+    user root
+    disabled
+
+service mpdecision /system/bin/mpdecision --no_sleep --avg_comp
+    user root
+    disabled
+
+service immvibed /system/bin/immvibed
+    user shell
+    group shell
+    oneshot
+
+#on property:init.svc.samsungani=stopped
+#    start mpdecision
+
+#on property:init.svc.bootanim=stopped
+#    start mpdecision
+
+on property:ro.baseband=svlte2a
+   setprop ro.config.ehrpd true
+   setprop ro.config.svlte1x true
+
+service qrngd /system/bin/qrngd -f
+    user root
