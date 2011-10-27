@@ -1,0 +1,125 @@
+on early-init
+    start ueventd
+
+on init
+    export PATH /sbin:/vendor/bin:/system/sbin:/system/bin:/system/xbin
+#{{ SEC_DEVENC
+#    export LD_LIBRARY_PATH /vendor/lib:/system/lib
+    export LD_LIBRARY_PATH /lib:/vendor/lib:/system/lib
+# }}
+    export ANDROID_ROOT /system
+    export ANDROID_DATA /data
+    export EXTERNAL_STORAGE /sdcard
+
+    symlink /system/etc /etc
+
+    mkdir /sdcard
+    mkdir /preload
+    mkdir /system
+    mkdir /data
+    mkdir /cache
+    mkdir /efs
+    mkdir /tmp
+    mkdir /dbdata
+
+    mkdir /mnt 0775 root root
+
+    #mount /tmp /tmp tmpfs   
+
+on early-fs
+
+    # rfs drivers
+    insmod /lib/modules/rfs_glue.ko
+    insmod /lib/modules/rfs_fat.ko
+
+    # parameter block
+    mkdir /mnt/.lfs 0755 root root
+    insmod /lib/modules/j4fs.ko
+    mount j4fs /dev/block/mmcblk0p4 /mnt/.lfs
+
+
+on fs
+    mount tmpfs tmpfs /tmp mode=0755
+
+	# verfiy filesystem (UMS)
+	exec check_filesystem /dev/block/mmcblk0p28 vfat
+
+on emmc-fs
+# mount mmc partitions
+    wait /dev/block/mmcblk0p24
+    mount ext4 /dev/block/mmcblk0p24 /system barrier=1
+   
+#{{ SEC_DEVENC
+#    wait /dev/block/mmcblk0p25
+#    mount ext4 /dev/block/mmcblk0p25 /data nosuid nodev barrier=1 noauto_da_alloc
+#}} SEC_DEVENC
+
+#    mount ext4 /dev/block/mmcblk0p28 /persist nosuid nodev barrier=1
+    mount ext4 /dev/block/mmcblk0p26 /cache nosuid nodev barrier=1
+    
+on post-fs
+
+    #temp
+    chmod 750 /sbin/fat.format
+    mount rootfs rootfs / ro remount
+
+    write /proc/sys/kernel/panic_on_oops 1
+    write /proc/sys/kernel/hung_task_timeout_secs 0
+    write /proc/cpu/alignment 4
+    write /proc/sys/kernel/sched_latency_ns 10000000
+    write /proc/sys/kernel/sched_wakeup_granularity_ns 2000000
+    write /proc/sys/kernel/sched_compat_yield 1
+    write /proc/sys/kernel/sched_child_runs_first 0
+
+on boot
+
+	ifup lo
+	hostname localhost
+	domainname localdomain
+#{{ SEC_DEVENC
+     #kj0225.park DeviceEncryption to Mount data partition with password encrypted
+     setprop devenc.pwdui.done 0    
+#}} SEC_DEVENC
+	class_start default
+
+	service ueventd /sbin/ueventd
+    	critical
+
+service console /system/bin/sh
+	console
+
+service adbd /sbin/adbd
+    enabled
+
+# adbd on at boot in emulator
+on property:ro.kernel.qemu=1
+    start adbd
+
+on property:persist.service.adb.enable=1
+    start adbd
+
+on property:persist.service.adb.enable=0
+    stop adbd
+
+#{{ SEC_DEVENC
+ service passcodemanager /system/bin/passcodemanager
+    oneshot
+#}} SEC_DEVENC
+service ua_loader /sbin/ua_loader
+#{{ SEC_DEVENC
+#    oneshot
+    disabled
+#}} SEC_DEVENC
+
+
+#{{ SEC_DEVENC
+on property:devenc.pwdui.done=1
+    chmod 0666 /dev/smodule
+   
+    mount ext4 /dev/block/mmcblk0p25 /data crypt nosuid nodev barrier=1 noauto_da_alloc
+    chown system system /data
+    chmod 0771 /data 
+    chmod 0777 /data/fota
+    start ua_loader
+    
+#}} SEC_DEVENC  
