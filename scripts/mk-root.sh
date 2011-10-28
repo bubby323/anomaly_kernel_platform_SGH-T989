@@ -1,56 +1,57 @@
 #!/bin/bash
 
-# The initramfs source path.
-INITRAMFSDIR=${HOME}/anomaly_kernel_platform_SGH-T989/initramfs/root/
+TOPDIR=$(pwd)/..
+SRCDIR=${TOPDIR}/source
+BLDDIR=${TOPDIR}/build
+INITRAMFSDIR=${TOPDIR}/initramfs/root
 
-# Change directories to the initramfs directory.
-cd ${HOME}/anomaly_kernel_platform_SGH-T989/initramfs/root/
-# Remove the hidden git files if they are in the directory.
-rm -rf .git/
+# Location of the toolchain prefix.
+TOOLCHAIN=${TOPDIR}/toolchain/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
+
+# Number of make jobs to run in parallel.
+MKJOBS=8
+
+STD_MK_OPTS="-j${MKJOBS} O=${TOPDIR}/build ARCH=arm CROSS_COMPILE=${TOOLCHAIN}"
+
+# clear .git* from initramfs root
+find ${INITRAMFSDIR} -name '\.git*' | xargs rm -rf
 
 # Change directory to the kernel source.
-cd ${HOME}/anomaly_kernel_platform_SGH-T989/source/
-# Tell the compiler we are building for arm.
-export ARCH=arm
-# Export to where the cross compiler is.
-export CROSS_COMPILE=${HOME}/anomaly_kernel_platform_SGH-T989/toolchain/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
+rm -rf ${BLDDIR}
+mkdir ${BLDDIR}
+pushd ${SRCDIR}
 
-# Triple make sure the build directory is clean.
-make distclean
-make mrproper
-make clean
-make clean
-make clean
+# Clean the build directory
+make ${STD_MK_OPTS} distclean
 
 # Configure the correct defconfig.
-make anomaly_kernel_platform_SGH-T989_defconfig
+make ${STD_MK_OPTS} anomaly_kernel_platform_SGH-T989_defconfig
 
 # Set the initramfs directory and build the zImage.
-make -j8 CONFIG_INITRAMFS_SOURCE="$INITRAMFSDIR"
+make ${STD_MK_OPTS} CONFIG_INITRAMFS_SOURCE=${INITRAMFSDIR}
 
 # Copy the freshly compiled modules to the initramfs.
-cp arch/arm/mach-msm/dal_remotetest.ko $INITRAMFSDIR/lib/modules/
-cp arch/arm/common/cpaccess.ko $INITRAMFSDIR/lib/modules/
-cp arch/arm/mach-msm/dma_test.ko $INITRAMFSDIR/lib/modules/
-cp arch/arm/oprofile/oprofile.ko $INITRAMFSDIR/lib/modules/
-cp arch/arm/perfmon/ksapi.ko $INITRAMFSDIR/lib/modules/
-cp crypto/ansi_cprng.ko $INITRAMFSDIR/lib/modules/
-cp drivers/bluetooth/bthid/bthid.ko $INITRAMFSDIR/lib/modules/
-cp drivers/crypto/msm/qce.ko $INITRAMFSDIR/lib/modules/
-cp drivers/crypto/msm/qcrypto.ko $INITRAMFSDIR/lib/modules/
-cp drivers/crypto/msm/qcedev.ko $INITRAMFSDIR/lib/modules/
-cp drivers/input/evbug.ko $INITRAMFSDIR/lib/modules/
-cp drivers/media/video/gspca/gspca_main.ko $INITRAMFSDIR/lib/modules/
-cp drivers/misc/msm_tsif.ko $INITRAMFSDIR/lib/modules/
-cp drivers/misc/tsif_chrdev.ko $INITRAMFSDIR/lib/modules/
-cp drivers/misc/vibetonz/vibrator.ko $INITRAMFSDIR/lib/modules/
-cp drivers/net/wireless/bcm4330/dhd.ko $INITRAMFSDIR/lib/modules/
-cp drivers/scsi/scsi_wait_scan.ko $INITRAMFSDIR/lib/modules/
-cp drivers/net/wireless/libra/librasdioif.ko $INITRAMFSDIR/lib/modules/
-cp drivers/spi/spidev.ko $INITRAMFSDIR/lib/modules/
-cp drivers/video/backlight/lcd.ko $INITRAMFSDIR/lib/modules/
+cp ${BLDDIR}/arch/arm/mach-msm/dal_remotetest.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/arch/arm/common/cpaccess.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/arch/arm/mach-msm/dma_test.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/arch/arm/oprofile/oprofile.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/arch/arm/perfmon/ksapi.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/crypto/ansi_cprng.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/bluetooth/bthid/bthid.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/crypto/msm/qce.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/crypto/msm/qcrypto.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/crypto/msm/qcedev.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/input/evbug.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/media/video/gspca/gspca_main.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/misc/msm_tsif.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/misc/tsif_chrdev.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/misc/vibetonz/vibrator.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/net/wireless/bcm4330/dhd.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/scsi/scsi_wait_scan.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/net/wireless/libra/librasdioif.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/spi/spidev.ko ${INITRAMFSDIR}/lib/modules/
+cp ${BLDDIR}/drivers/video/backlight/lcd.ko ${INITRAMFSDIR}/lib/modules/
 
 # Build the kernel again with the same initramfs, but with newly compiled modules.
-make -j8 CONFIG_INITRAMFS_SOURCE="$INITRAMFSDIR"
-
-
+make ${STD_MK_OPTS} CONFIG_INITRAMFS_SOURCE=${INITRAMFSDIR}
+popd
