@@ -1,0 +1,5 @@
+# mount point   device name   device mapper path   device mapper name   file sysystem   protect type
+/data /dev/block/mmcblk0p25 /dev/mapper/data data ext4 PROTECTED_WITH_PASSWORD 
+/cache /dev/block/mmcblk0p26 /dev/mapper/cache cache ext4 NOT_PROTECTED 
+/efs /dev/block/mmcblk0p21 /dev/mapper/efs efs ext4 NOT_PROTECTED 
+/sdcard /dev/block/mmcblk0p28 /dev/mapper/179:28 sdcard vfat PROTECTED_WITH_PASSWORD
