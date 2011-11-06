@@ -1192,8 +1192,10 @@ static pgoff_t ext4_num_dirty_pages(struct inode *inode, pgoff_t idx,
 				break;
 			idx++;
 			num++;
-			if (num >= max_pages)
-				break;
+			if (num >= max_pages) {
+                done = 1;
+                break;
+            }
 		}
 		pagevec_release(&pvec);
 	}
@@ -2976,22 +2978,30 @@ static int ext4_da_writepages(struct address_space *mapping,
 	 * sbi->max_writeback_mb_bump whichever is smaller.
 	 */
 	max_pages = sbi->s_max_writeback_mb_bump << (20 - PAGE_CACHE_SHIFT);
-	if (!range_cyclic && range_whole)
-		desired_nr_to_write = wbc->nr_to_write * 8;
-	else
-		desired_nr_to_write = ext4_num_dirty_pages(inode, index,
-							   max_pages);
+    if (!range_cyclic && range_whole) {
+        
+        if (wbc->nr_to_write == LLONG_MAX)
+            
+            desired_nr_to_write = wbc->nr_to_write;
+        
+        else
+            
+            desired_nr_to_write = wbc->nr_to_write * 8;
+        
+    } else
+        desired_nr_to_write = ext4_num_dirty_pages(inode, index,
+                                                   max_pages);
 	if (desired_nr_to_write > max_pages)
 		desired_nr_to_write = max_pages;
-
+    
 	if (wbc->nr_to_write < desired_nr_to_write) {
 		nr_to_writebump = desired_nr_to_write - wbc->nr_to_write;
 		wbc->nr_to_write = desired_nr_to_write;
 	}
-
+    
 	mpd.wbc = wbc;
 	mpd.inode = mapping->host;
-
+    
 	pages_skipped = wbc->pages_skipped;
 
 retry:
